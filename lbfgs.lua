@@ -45,6 +45,7 @@ function optim.lbfgs(opfunc, x, config, state)
    local lineSearch = config.lineSearch
    local lineSearchOpts = config.lineSearchOptions
    local learningRate = config.learningRate or 1
+   local miniBatchCorrection = config.miniBatchCorrection or false
    local isverbose = config.verbose or false
    
    state.funcEval = state.funcEval or 0
@@ -85,6 +86,14 @@ function optim.lbfgs(opfunc, x, config, state)
    local Hdiag = state.Hdiag
    local g_old = state.g_old
    local f_old = state.f_old
+   local x_old = state.x_old
+
+   -- if miniBatchCorrection is requested,
+   -- update g_old at x_old but with new data
+   if x_old and miniBatchCorrection then
+      f_old,g_old = opfunc(x_old)
+      append(f_hist, 1, f_old)
+   end
 
    -- optimize for a max of maxIter iterations
    local nIter = 0
@@ -170,6 +179,7 @@ function optim.lbfgs(opfunc, x, config, state)
          -- final direction:
          d:copy(r[k+1])
       end
+      x_old = miniBatchCorrection and x:clone()
       g_old = g:clone()
       f_old = f
 
@@ -257,6 +267,7 @@ function optim.lbfgs(opfunc, x, config, state)
    state.Hdiag = Hdiag
    state.g_old = g_old
    state.f_old = f_old
+   state.x_old = x_old
    state.t = t
    state.d = d
 
